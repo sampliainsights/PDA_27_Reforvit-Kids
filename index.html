@@ -50,6 +50,7 @@ button,input{font:inherit;color:inherit}
 .nav a.active{background:var(--blush-50);color:var(--rasp)}
 @media (hover:hover) and (pointer:fine){.nav a:hover{background:var(--mist);color:var(--ink)}.nav a.active:hover{background:var(--blush-50);color:var(--rasp)}}
 .status{display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--ink-50);margin-bottom:12px}
+.status[hidden]{display:none}
 .status i{width:8px;height:8px;border-radius:50%;background:var(--neutral);flex:none}
 .status.live i{background:var(--dusk)} .status.local i{background:var(--melon)}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:var(--paper);border-radius:3px;padding:9px 14px;font-family:var(--font-head);font-weight:700;font-size:.86rem;text-transform:uppercase;letter-spacing:.03em;cursor:pointer;transition:transform 160ms var(--ease-out),background-color 160ms ease}
@@ -654,7 +655,7 @@ const SENT_COLORS = { Positivo: C.dusk, Neutro: C.neutral, Negativo: C.rasp };
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const state = {
-  rows: [], headers: {}, source: '', liveErrors: [], excluded: 0, preExcluded: 0,
+  rows: [], headers: {}, source: '', liveErrors: [], excluded: 0, preExcluded: 0, totalRows: 0,
   f: { compra: 'all', gen: 'all', age: 'all' },
   compare: true,
   vb: { q: '', sent: 'all', theme: null, limit: 12 }
@@ -791,8 +792,10 @@ function buildRows(matrix) {
   state.headers = Object.fromEntries(Object.entries(idx).map(([k, i]) => [k, heads[i]]));
 
   const num = v => { const n = parseFloat(String(v ?? '').replace(',', '.')); return (n >= 1 && n <= 5) ? n : null; };
-  const rows = []; state.excluded = state.preExcluded || 0;
-  matrix.slice(hi + 1).forEach(r => {
+  const rows = [], responseRows = matrix.slice(hi + 1);
+  state.excluded = state.preExcluded || 0;
+  state.totalRows = responseRows.length + state.excluded;
+  responseRows.forEach(r => {
     const get = k => idx[k] == null ? '' : String(r[idx[k]] ?? '').replace(/\uFFFC/g, '').trim();
     if (CONFIG.notReceived && CONFIG.notReceived.test(norm(get('porque')))) { state.excluded++; return; }
     const o = { ts: get('ts'), porque: emptyAnswer(get('porque')) ? '' : get('porque'), cat: get('cat') };
@@ -833,7 +836,7 @@ async function loadData() {
       try {
         const txt = await fetchText(url);
         state.rows = buildRows(toMatrix(txt)); state.source = 'live';
-        setStatus('live', `Datos en vivo de la hoja (${state.rows.length} respuestas${exNote()})`);
+        setStatus('live', '');
         return;
       } catch (e) {
         errors.push(src.name + ': ' + e.message);
@@ -853,7 +856,7 @@ function footNote() {
   el.textContent = 'Samplia Insights. Datos de la hoja de respuestas de la encuesta.' +
     (state.excluded ? ` Se excluyen ${state.excluded} respuestas de personas que indican no haber recibido o probado el producto.` : '');
 }
-function setStatus(kind, text) { const el = $('#status'); el.className = 'status ' + kind; el.lastElementChild.textContent = text; }
+function setStatus(kind, text) { const el = $('#status'); el.className = 'status ' + kind; el.lastElementChild.textContent = text; el.hidden = !text; }
 
 /* ================= Filtros ================= */
 const byBuy = r => state.f.compra === 'all' || r.compra === state.f.compra;
@@ -1194,7 +1197,8 @@ function renderInsights() {
 function renderHero() {
   const sel = rowsSel(), all = rowsAll();
   const si = all.filter(r => r.compra === 'Sí').length, n = all.filter(r => r.compra).length;
-  $('#factN').textContent = sel.length + (sel.length !== state.rows.length ? ` de ${state.rows.length}` : '');
+  const totalRows = state.totalRows || state.rows.length;
+  $('#factN').textContent = totalRows;
   $('#factBuy').textContent = pct(si, n);
   $$('[data-seal-n]').forEach(el => el.textContent = sel.length);
   const nSi = all.filter(r => r.compra === 'Sí').length, nNo = all.filter(r => r.compra === 'No').length;
