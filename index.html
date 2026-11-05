@@ -1235,12 +1235,12 @@ function renderInsights() {
 
 /* ---------- Varios ---------- */
 function renderHero() {
-  const sel = rowsSel(), all = rowsAll();
+  const all = rowsAll();
   const si = all.filter(r => r.compra === 'Sí').length, n = all.filter(r => r.compra).length;
   const totalRows = state.totalRows || state.rows.length;
   $('#factN').textContent = totalRows;
   $('#factBuy').textContent = pct(si, n);
-  $$('[data-seal-n]').forEach(el => el.textContent = sel.length);
+  $$('[data-seal-n]').forEach(el => el.textContent = totalRows);
   const nSi = all.filter(r => r.compra === 'Sí').length, nNo = all.filter(r => r.compra === 'No').length;
   $('#compraNote').textContent = `${pct(nSi, nSi + nNo)} responde que sí y ${pct(nNo, nSi + nNo)} que no.`;
 }
